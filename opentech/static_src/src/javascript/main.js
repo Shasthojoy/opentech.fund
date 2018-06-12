@@ -82,7 +82,7 @@ import '@fancyapps/fancybox';
         $('.js-to-top').click(() => $('.js-activity-feed').animate({ scrollTop: 0 }, 250));
 
         // Add <tr> toggle arrow
-        $('.tr--parent td.title').prepend('<span class="js-tr-toggle arrow"></span>');
+        $('.all-submissions__parent td.title').prepend('<span class="js-tr-toggle arrow"></span>');
 
         // Toggle show/hide for submissions overview table rows
         const children = Array.prototype.slice.call(
@@ -91,7 +91,7 @@ import '@fancyapps/fancybox';
 
         children.forEach(function (child) {
             child.addEventListener('click', function (e) {
-                $(e.target).closest('.tr--parent').toggleClass('is-expanded');
+                $(e.target).closest('.all-submissions__parent').toggleClass('is-expanded');
             });
         });
 
