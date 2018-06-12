@@ -222,6 +222,17 @@ import '@fancyapps/fancybox';
         $(window).on('mouseup', () => attachment = false);
     };
 
+    // add data-attr to submission table titles for tooltips
+    const submissionTitles = Array.from(document.querySelectorAll('td.title'));
+    submissionTitles.forEach(function(submissionTitle){
+        addDataAttr(submissionTitle);
+    });
+
+    function addDataAttr(title) {
+        const toolTip = $(title).children('a')[0].textContent;
+        title.setAttribute('data-tooltip', toolTip);
+    }
+
     // reset mobile filters if they're open past the tablet breakpoint
     $(window).resize(function resize(){
         if ($(window).width() < 768) {
