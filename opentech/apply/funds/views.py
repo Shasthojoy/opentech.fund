@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseRedirect
 from django.utils.decorators import method_decorator
+from django.utils.html import format_html
 from django.utils.text import mark_safe
 from django.views.generic import UpdateView, TemplateView
 
@@ -253,6 +254,15 @@ class RevisionListView(TemplateView):
 class RevisionCompareView(TemplateView):
     template_name = 'funds/revisions_compare.html'
 
+    def wrap(self, class_name, text):
+        return format_html('<span class="{}">{}</span>', class_name, mark_safe(text))
+
+    def deleted(self, text):
+        return self.wrap('deleted', text)
+
+    def added(self, text):
+        return self.wrap('added', text)
+
     def compare_answer(self, answer_a, answer_b):
         if not answer_a and not answer_b:
             # This catches the case where both results are None and we cant compare
@@ -267,12 +277,12 @@ class RevisionCompareView(TemplateView):
             if opcode == 'equal':
                 output.append(diff.a[a0:a1])
             elif opcode == 'insert':
-                output.append('<span class="added">' + diff.b[b0:b1] + '</span>')
+                output.append(self.added(diff.b[b0:b1]))
             elif opcode == 'delete':
-                output.append('<span class="deleted">' + diff.a[a0:a1] + "</span>")
+                output.append(self.deleted(diff.a[a0:a1]))
             elif opcode == 'replace':
-                output.append('<span class="deleted">' + diff.a[a0:a1] + "</span>")
-                output.append('<span class="added">' + diff.b[b0:b1] + '</span>')
+                output.append(self.deleted(diff.a[a0:a1]))
+                output.append(self.added(diff.b[b0:b1]))
             else:
                 raise RuntimeError("unexpected opcode")
         return mark_safe(''.join(output))
