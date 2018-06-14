@@ -3,6 +3,7 @@ import MobileMenu from './components/mobile-menu';
 import Search from './components/search';
 import MobileSearch from './components/mobile-search';
 import Tabs from './components/tabs';
+import generateTooltips from './components/submission-tooltips';
 import '@fancyapps/fancybox';
 
 (function ($) {
@@ -25,6 +26,9 @@ import '@fancyapps/fancybox';
         $(Tabs.selector()).each((index, el) => {
             new Tabs($(el));
         });
+
+        // Add tooltips to truncated titles on submissions overview table
+        generateTooltips();
 
         // Show list of selected files for upload on input[type=file]
         $('input[type=file]').change(function() {
@@ -82,7 +86,7 @@ import '@fancyapps/fancybox';
         $('.js-to-top').click(() => $('.js-activity-feed').animate({ scrollTop: 0 }, 250));
 
         // Add <tr> toggle arrow
-        $('.tr--parent td.title').prepend('<span class="js-tr-toggle arrow"></span>');
+        $('.all-submissions__parent td.title').prepend('<span class="js-tr-toggle arrow"></span>');
 
         // Toggle show/hide for submissions overview table rows
         const children = Array.prototype.slice.call(
@@ -91,7 +95,7 @@ import '@fancyapps/fancybox';
 
         children.forEach(function (child) {
             child.addEventListener('click', function (e) {
-                $(e.target).closest('.tr--parent').toggleClass('is-expanded');
+                $(e.target).closest('.all-submissions__parent').toggleClass('is-expanded');
             });
         });
 
@@ -268,7 +272,7 @@ import '@fancyapps/fancybox';
 // wait for DOM content to load before checking for select2
 document.addEventListener('DOMContentLoaded', () => {
     // Add active class to select2 checkboxes after page has been filtered
-    const clearButtons = document.querySelectorAll('.select2-selection__clear');
+    const clearButtons = Array.prototype.slice.call(document.querySelectorAll('.select2-selection__clear'));
     clearButtons.forEach(clearButton => {
         clearButton.parentElement.parentElement.classList.add('is-active');
     });

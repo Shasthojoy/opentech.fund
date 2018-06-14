@@ -1,3 +1,5 @@
+import textwrap
+
 from django import forms
 from django.contrib.auth import get_user_model
 from django.db.models import OuterRef, Subquery, F, Q
@@ -17,14 +19,14 @@ from .widgets import Select2MultiCheckboxesWidget
 
 
 def make_row_class(record):
-    css_class = 'tr tr--child' if record.next else 'tr tr--parent'
+    css_class = 'submission-meta__row' if record.next else 'all-submissions__parent'
     css_class += '' if record.active else ' is-inactive'
     return css_class
 
 
 class SubmissionsTable(tables.Table):
     """Base table for listing submissions, do not include admin data to this table"""
-    title = tables.LinkColumn('funds:submission', args=[A('pk')], orderable=True)
+    title = tables.LinkColumn('funds:submission', args=[A('pk')], orderable=True, attrs={'td': {'data-tooltip': lambda record: record.title, 'class': 'js-title'}})
     submit_time = tables.DateColumn(verbose_name="Submitted")
     status_name = tables.Column(verbose_name="Status")
     stage = tables.Column(verbose_name="Type", order_by=('status',))
@@ -42,9 +44,13 @@ class SubmissionsTable(tables.Table):
             'class': make_row_class,
             'data-record-id': lambda record: record.id,
         }
+        attrs = {'class': 'all-submissions'}
 
     def render_user(self, value):
         return value.get_full_name()
+
+    def render_title(self, value):
+        return textwrap.shorten(value, width=30, placeholder="...")
 
     def render_status_name(self, value):
         return mark_safe(f'<span>{ value }</span>')
