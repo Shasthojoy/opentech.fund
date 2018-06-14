@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseRedirect
 from django.utils.decorators import method_decorator
+from django.utils.text import mark_safe
 from django.views.generic import UpdateView, TemplateView
 
 from django_filters.views import FilterView
@@ -254,8 +255,13 @@ class RevisionCompareView(TemplateView):
 
     def compare_answer(self, answer_a, answer_b):
         if not answer_a and not answer_b:
+            # This catches the case where both results are None and we cant compare
             return answer_b
-        diff = SequenceMatcher(answer_a, answer_b)
+        if isinstance(answer_a, dict) or isinstance(answer_b, dict):
+            # TODO: handle file dictionaries
+            return answer_b
+
+        diff = SequenceMatcher(None, answer_a, answer_b)
         output = []
         for opcode, a0, a1, b0, b1 in diff.get_opcodes():
             if opcode == 'equal':
@@ -265,10 +271,11 @@ class RevisionCompareView(TemplateView):
             elif opcode == 'delete':
                 output.append('<span class="deleted">' + diff.a[a0:a1] + "</span>")
             elif opcode == 'replace':
-                raise NotImplementedError("what to do with 'replace' opcode?")
+                output.append('<span class="deleted">' + diff.a[a0:a1] + "</span>")
+                output.append('<span class="added">' + diff.b[b0:b1] + '</span>')
             else:
                 raise RuntimeError("unexpected opcode")
-        return ''.join(output)
+        return mark_safe(''.join(output))
 
     def compare(self, from_data, to_data):
         diffed_form_data = {
