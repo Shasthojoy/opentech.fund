@@ -26,7 +26,7 @@ def make_row_class(record):
 
 class SubmissionsTable(tables.Table):
     """Base table for listing submissions, do not include admin data to this table"""
-    title = tables.LinkColumn('funds:submission', args=[A('pk')], orderable=True)
+    title = tables.LinkColumn('funds:submission', args=[A('pk')], orderable=True, attrs={'td': {'data-tooltip': lambda record: record.title, 'class': 'js-title'}})
     submit_time = tables.DateColumn(verbose_name="Submitted")
     status_name = tables.Column(verbose_name="Status")
     stage = tables.Column(verbose_name="Type", order_by=('status',))

@@ -3,6 +3,7 @@ import MobileMenu from './components/mobile-menu';
 import Search from './components/search';
 import MobileSearch from './components/mobile-search';
 import Tabs from './components/tabs';
+import generateTooltips from './components/submission-tooltips';
 import '@fancyapps/fancybox';
 
 (function ($) {
@@ -25,6 +26,9 @@ import '@fancyapps/fancybox';
         $(Tabs.selector()).each((index, el) => {
             new Tabs($(el));
         });
+
+        // Add tooltips to truncated titles on submissions overview table
+        generateTooltips();
 
         // Show list of selected files for upload on input[type=file]
         $('input[type=file]').change(function() {
@@ -221,17 +225,6 @@ import '@fancyapps/fancybox';
         });
         $(window).on('mouseup', () => attachment = false);
     };
-
-    // add data-attr to submission table titles for tooltips
-    const submissionTitles = Array.from(document.querySelectorAll('td.title'));
-    submissionTitles.forEach(function(submissionTitle){
-        addDataAttr(submissionTitle);
-    });
-
-    function addDataAttr(title) {
-        const toolTip = $(title).children('a')[0].textContent;
-        title.setAttribute('data-tooltip', toolTip);
-    }
 
     // reset mobile filters if they're open past the tablet breakpoint
     $(window).resize(function resize(){
