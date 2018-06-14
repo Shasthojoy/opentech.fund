@@ -2,7 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseRedirect
 from django.utils.decorators import method_decorator
-from django.views.generic import UpdateView
+from django.views.generic import UpdateView, TemplateView
 
 from django_filters.views import FilterView
 from django_fsm import can_proceed
@@ -18,6 +18,7 @@ from opentech.apply.activity.models import Activity
 from opentech.apply.review.views import ReviewContextMixin
 from opentech.apply.users.decorators import staff_required
 from opentech.apply.utils.views import DelegateableView, ViewDispatcher
+from opentech.apply.users.models import User
 
 from .blocks import MustIncludeFieldBlock
 from .forms import ProgressSubmissionForm, UpdateReviewersForm, UpdateSubmissionLeadForm
@@ -222,3 +223,21 @@ class SubmissionEditView(UpdateView):
         self.object.form_data = form.cleaned_data
         self.object.save()
         return HttpResponseRedirect(self.get_success_url())
+
+
+class RevisionListView(TemplateView):
+    template_name = 'funds/revisions_list.html'
+
+    def get_context_data(self, **kwargs):
+        revisions = [
+            {
+                'date': "2018/06/14",
+                'author': User.objects.all()[i],
+            }
+            for i in range(5)
+        ]
+        return super().get_context_data(
+            submission=ApplicationSubmission.objects.first(),
+            revisions=revisions,
+            **kwargs,
+        )
