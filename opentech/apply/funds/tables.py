@@ -24,9 +24,13 @@ def make_row_class(record):
     return css_class
 
 
+def render_title(record):
+    return textwrap.shorten(record.title, width=30, placeholder="...")
+
+
 class SubmissionsTable(tables.Table):
     """Base table for listing submissions, do not include admin data to this table"""
-    title = tables.LinkColumn('funds:submissions:detail', args=[A('pk')], orderable=True, attrs={'td': {'data-tooltip': lambda record: record.title, 'class': 'js-title'}})
+    title = tables.LinkColumn('funds:submissions:detail', text=render_title, args=[A('pk')], orderable=True, attrs={'td': {'data-tooltip': lambda record: record.title, 'class': 'js-title'}})
     submit_time = tables.DateColumn(verbose_name="Submitted")
     phase = tables.Column(verbose_name="Status", order_by=('status',))
     stage = tables.Column(verbose_name="Type", order_by=('status',))
@@ -48,9 +52,6 @@ class SubmissionsTable(tables.Table):
 
     def render_user(self, value):
         return value.get_full_name()
-
-    def render_title(self, value):
-        return textwrap.shorten(value, width=30, placeholder="...")
 
     def render_phase(self, value):
         return mark_safe(f'<span>{ value }</span>')
