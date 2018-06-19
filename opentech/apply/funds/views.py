@@ -2,7 +2,6 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseRedirect
 from django.utils.decorators import method_decorator
-from django.utils.html import format_html
 from django.utils.text import mark_safe
 from django.views.generic import UpdateView, TemplateView
 
