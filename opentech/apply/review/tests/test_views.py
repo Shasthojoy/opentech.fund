@@ -1,4 +1,3 @@
-from django.test import TestCase, RequestFactory
 from django.urls import reverse
 
 from opentech.apply.funds.tests.factories import ApplicationSubmissionFactory
