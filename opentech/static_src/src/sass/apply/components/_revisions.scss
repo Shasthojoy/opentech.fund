@@ -1,10 +1,12 @@
-span {
-    &.deleted,
-    &.deleted a {
+.diff {
+    display: inline-block;
+
+    &__deleted,
+    &__deleted a {
         background-color: #EE9090;
     }
-    &.added,
-    &.added a {
+    &__added,
+    &__added a {
         background-color: #90EE90;
     }
 }
