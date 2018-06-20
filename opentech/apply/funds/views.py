@@ -3,6 +3,7 @@ from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
+from django.utils.text import mark_safe
 from django.views.generic import UpdateView, TemplateView
 
 from django_filters.views import FilterView
@@ -23,6 +24,7 @@ from opentech.apply.utils.views import DelegateableView, ViewDispatcher
 from opentech.apply.users.models import User
 
 from .blocks import MustIncludeFieldBlock
+from .differ import compare
 from .forms import ProgressSubmissionForm, UpdateReviewersForm, UpdateSubmissionLeadForm
 from .models import ApplicationSubmission
 from .tables import AdminSubmissionsTable, SubmissionFilter, SubmissionFilterAndSearch
@@ -254,15 +256,46 @@ class RevisionListView(TemplateView):
     template_name = 'funds/revisions_list.html'
 
     def get_context_data(self, **kwargs):
-        revisions = [
-            {
-                'date': "2018/06/14",
-                'author': User.objects.all()[i],
-            }
-            for i in range(5)
-        ]
+        submission = ApplicationSubmission.objects.get(id=self.kwargs['submission_pk'])
+        revisions = [{
+            'date': "2018/06/14",
+            'author': User.objects.first(),
+            'id': submission.id,
+        }]
+        revisions.extend([{
+            'date': "2018/06/14",
+            'author': User.objects.all()[i],
+            'id': ApplicationSubmission.objects.order_by('?').first().id,
+        } for i in range(5)])
         return super().get_context_data(
-            submission=ApplicationSubmission.objects.first(),
+            submission=submission,
             revisions=revisions,
+            **kwargs,
+        )
+
+
+class RevisionCompareView(TemplateView):
+    template_name = 'funds/revisions_compare.html'
+
+    def compare_revisions(self, from_data, to_data):
+        diffed_form_data = {
+            field: compare(from_data.form_data.get(field), to_data.form_data[field])
+            for field in to_data.form_data
+        }
+        diffed_answers = [
+            compare(*fields, should_bleach=False)
+            for fields in zip(from_data.fields, to_data.fields)
+        ]
+        to_data.form_data = diffed_form_data
+        to_data.render_answers = mark_safe(''.join(diffed_answers))
+        return to_data
+
+    def get_context_data(self, **kwargs):
+        from_revision = ApplicationSubmission.objects.get(id=self.kwargs['from'])
+        to_revision = ApplicationSubmission.objects.get(id=self.kwargs['to'])
+        diff = self.compare_revisions(from_revision, to_revision)
+        return super().get_context_data(
+            submission=ApplicationSubmission.objects.get(id=self.kwargs['submission_pk']),
+            diff=diff,
             **kwargs,
         )
