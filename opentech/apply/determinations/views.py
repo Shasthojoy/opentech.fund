@@ -22,12 +22,6 @@ def get_form_for_stage(submission):
     return forms[index]
 
 
-def get_prefix_for_stage(submission):
-    labels = ['concept_', 'proposal_']
-    index = submission.workflow.stages.index(submission.stage)
-    return labels[index]
-
-
 class CreateOrUpdateView(SingleObjectTemplateResponseMixin, ModelFormMixin, ProcessFormView):
 
     def get(self, request, *args, **kwargs):
@@ -78,19 +72,12 @@ class DeterminationCreateOrUpdateView(CreateOrUpdateView):
             has_determination_response = False
 
         messages = DeterminationMessageSettings.for_site(self.request.site)
-        prefix = get_prefix_for_stage(self.submission)
-        canned_messages = {}
-
-        for field in DeterminationMessageSettings._meta.get_fields():
-            if prefix in field.name:
-                key = field.name.replace(prefix, '')
-                canned_messages[key] = getattr(messages, field.name)
 
         return super().get_context_data(
             submission=self.submission,
             has_determination_response=has_determination_response,
             title="Update Determination draft" if self.object else 'Add Determination',
-            canned_messages=canned_messages,
+            message_templates=messages.get_for_stage(self.submission.stage.name),
             **kwargs
         )
 
