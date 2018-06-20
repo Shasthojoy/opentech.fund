@@ -1,0 +1,28 @@
+{% extends "base-apply.html" %}
+{% load bleach_tags %}
+
+{% block content %}
+<div class="wrapper wrapper--breakout wrapper--admin">
+    <div class="wrapper wrapper--large">
+        <h2 class="heading heading--no-margin">Determination</h2>
+        <h5>For <a href="{% url "funds:submissions:detail" determination.submission.id %}">{{ determination.submission.title }}</a></h5>
+    </div>
+</div>
+
+<div class="grid">
+    <div>
+        <h5>Determination</h5>
+        <p>{{ determination.get_outcome_display }}</p>
+        {{ determination.message|bleach }}
+    </div>
+</div>
+
+    {% if can_view_extended_data %}
+        <div class="rich-text rich-text--answers">
+            {% for question, answer in determination_data.items %}
+                <h5>{{ question }}</h5>
+                {% if answer %}{{ answer|bleach }}{% else %}&mdash;{% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}

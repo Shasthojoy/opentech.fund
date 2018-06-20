@@ -13,6 +13,7 @@ import submissionFilters from './components/submission-filters';
 import mobileFilterPadding from './components/mobile-filter-padding';
 import generateTooltips from './components/submission-tooltips';
 import toggleReviewers from './components/toggle-reviewers';
+import DeterminationCopy from './components/determination-template';
 
 (function ($) {
     $(document).ready(function(){
@@ -33,6 +34,10 @@ import toggleReviewers from './components/toggle-reviewers';
 
         $(Tabs.selector()).each((index, el) => {
             new Tabs($(el));
+        });
+
+        $(DeterminationCopy.selector()).each((index, el) => {
+            new DeterminationCopy($(el));
         });
 
         // Add tooltips to truncated titles on submissions overview table
