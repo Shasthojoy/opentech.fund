@@ -51,8 +51,8 @@ class BaseDeterminationForm(forms.ModelForm):
 
         super().__init__(*args, initial=initial, instance=instance, **kwargs)
 
-        for field in self._meta.widgets:
-            self.fields[field].disabled = True
+        # for field in self._meta.widgets:
+        #     self.fields[field].disabled = True
 
         if self.draft_button_name in self.data:
             for field in self.fields.values():
