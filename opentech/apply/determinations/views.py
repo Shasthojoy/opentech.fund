@@ -13,7 +13,7 @@ from django_fsm import can_proceed
 from opentech.apply.funds.models import ApplicationSubmission
 
 from .forms import ConceptDeterminationForm, ProposalDeterminationForm
-from .models import Determination, ACCEPTED, REJECTED, DeterminationMessageSettings
+from .models import Determination, ACCEPTED, REJECTED, DeterminationMessageSettings, NEEDS_MORE_INFO
 
 
 def get_form_for_stage(submission):
