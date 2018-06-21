@@ -3,7 +3,9 @@
 <div class="sidebar__inner">
     <h5>Determination</h5>
     {% if object.determination %}
-        <a href="{% url 'apply:submissions:determinations:detail' submission_pk=object.id %}">{{ object.determination.get_outcome_display }}</a>
+        <a href="{% url 'apply:submissions:determinations:detail' submission_pk=object.id %}">
+            {% if object|has_determination_draft:request.user %}[Draft] {% endif %}{{ object.determination.get_outcome_display }}
+        </a>
         {{ object.determination.updated_at|date:"Y-m-d" }} by {{ object.determination.author }}
     {% endif %}
     {% include 'determinations/includes/determination_button.html' with submission=object %}
