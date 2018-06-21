@@ -1,8 +1,11 @@
 from django.urls import reverse
+from datetime import datetime, timedelta
 
-from opentech.apply.funds.tests.factories import ApplicationSubmissionFactory
+from opentech.apply.funds.tests.factories import ApplicationSubmissionFactory, ApplicationRevisionFactory
 from opentech.apply.users.tests.factories import UserFactory, StaffFactory
 from opentech.apply.utils.tests import BaseViewTestCase
+
+from ..models import ApplicationRevision
 
 
 class BaseSubmissionViewTestCase(BaseViewTestCase):
@@ -52,6 +55,17 @@ class TestApplicantSubmissionView(BaseSubmissionViewTestCase):
         response = self.get_page(submission)
         self.assertContains(response, submission.title)
 
+    def test_sees_latest_draft_if_it_exists(self):
+        submission = ApplicationSubmissionFactory(user=self.user)
+        draft_revision = ApplicationRevisionFactory(submission=submission)
+        submission.draft_revision = draft_revision
+        submission.save()
+
+        draft_submission = submission.from_draft()
+        response = self.get_page(submission)
+
+        self.assertContains(response, draft_submission.title)
+
     def test_cant_view_others_submission(self):
         submission = ApplicationSubmissionFactory()
         response = self.get_page(submission)
@@ -83,3 +97,72 @@ class TestApplicantSubmissionView(BaseSubmissionViewTestCase):
         submission = ApplicationSubmissionFactory(draft_proposal=True)
         response = self.get_page(submission, 'edit')
         self.assertEqual(response.status_code, 403)
+
+
+class TestRevisionsView(BaseSubmissionViewTestCase):
+    user_factory = UserFactory
+
+    def test_create_revisions_on_submit(self):
+        submission = ApplicationSubmissionFactory(status='draft_proposal', workflow_stages=2, user=self.user)
+        old_data = submission.form_data.copy()
+        new_data = submission.raw_data
+        new_title = 'New title'
+        new_data[submission.must_include['title']] = new_title
+
+        self.post_page(submission, {'submit': True, **new_data}, 'edit')
+
+        submission = self.refresh(submission)
+
+        self.assertEqual(submission.status, 'proposal_discussion')
+        self.assertEqual(submission.revisions.count(), 2)
+        self.assertDictEqual(submission.revisions.last().form_data, old_data)
+        self.assertDictEqual(submission.live_revision.form_data, submission.form_data)
+        self.assertEqual(submission.title, new_title)
+
+    def test_dont_update_live_revision_on_save(self):
+        submission = ApplicationSubmissionFactory(status='draft_proposal', workflow_stages=2, user=self.user)
+        old_data = submission.form_data.copy()
+        new_data = submission.raw_data
+        new_data[submission.must_include['title']] = 'New title'
+        self.post_page(submission, {'save': True, **new_data}, 'edit')
+
+        submission = self.refresh(submission)
+
+        self.assertEqual(submission.status, 'draft_proposal')
+        self.assertEqual(submission.revisions.count(), 2)
+        self.assertDictEqual(submission.draft_revision.form_data, submission.from_draft().form_data)
+        self.assertDictEqual(submission.live_revision.form_data, old_data)
+
+
+class TestRevisionList(BaseSubmissionViewTestCase):
+    base_view_name = 'revisions:list'
+    user_factory = StaffFactory
+
+    def get_kwargs(self, instance):
+        return {'submission_pk': instance.pk}
+
+    def test_list_doesnt_include_draft(self):
+        submission = ApplicationSubmissionFactory()
+        draft_revision = ApplicationRevisionFactory(submission=submission)
+        submission.draft_revision = draft_revision
+        submission.save()
+
+        response = self.get_page(submission)
+
+        self.assertNotIn(draft_revision, response.context['object_list'])
+
+    def test_get_in_correct_order(self):
+        submission = ApplicationSubmissionFactory()
+
+        revision = ApplicationRevisionFactory(submission=submission)
+        ApplicationRevision.objects.filter(id=revision.id).update(timestamp=datetime.now() - timedelta(days=1))
+
+        revision_older = ApplicationRevisionFactory(submission=submission)
+        ApplicationRevision.objects.filter(id=revision_older.id).update(timestamp=datetime.now() - timedelta(days=2))
+
+        response = self.get_page(submission)
+
+        self.assertSequenceEqual(
+            response.context['object_list'],
+            [submission.live_revision, revision, revision_older],
+        )

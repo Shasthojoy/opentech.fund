@@ -1,12 +1,19 @@
 .diff {
     display: inline-block;
 
-    &__deleted,
-    &__deleted a {
-        background-color: #EE9090;
+    &__deleted {
+        background-color: $color--pastel-red;
+
+        a {
+            background-color: inherit;
+        }
     }
-    &__added,
-    &__added a {
-        background-color: #90EE90;
+
+    &__added {
+        background-color: $color--pastel-green;
+
+        a {
+            background-color: inherit;
+        }
     }
 }

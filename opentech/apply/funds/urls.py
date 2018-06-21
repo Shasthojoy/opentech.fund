@@ -27,6 +27,7 @@ submission_urls = ([
     path('<int:submission_pk>/revisions/', include(revision_urls, namespace="revisions")),
 ], 'submissions')
 
+
 urlpatterns = [
     path('submissions/', include(submission_urls)),
     path('search', SubmissionSearchView.as_view(), name="search"),

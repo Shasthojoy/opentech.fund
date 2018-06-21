@@ -1,10 +1,11 @@
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseRedirect
+from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.utils.text import mark_safe
-from django.views.generic import UpdateView, TemplateView
+from django.views.generic import DetailView, ListView, UpdateView
 
 from django_filters.views import FilterView
 from django_tables2.views import SingleTableMixin
@@ -22,10 +23,9 @@ from opentech.apply.users.decorators import staff_required
 from opentech.apply.utils.views import DelegateableView, ViewDispatcher
 from opentech.apply.users.models import User
 
-from .blocks import MustIncludeFieldBlock
 from .differ import compare
 from .forms import ProgressSubmissionForm, UpdateReviewersForm, UpdateSubmissionLeadForm
-from .models import ApplicationSubmission
+from .models import ApplicationSubmission, ApplicationRevision
 from .tables import AdminSubmissionsTable, SubmissionFilter, SubmissionFilterAndSearch
 
 
@@ -158,6 +158,9 @@ class ApplicantSubmissionDetailView(ActivityContextMixin, DelegateableView):
     model = ApplicationSubmission
     form_views = [CommentFormView]
 
+    def get_object(self):
+        return super().get_object().from_draft()
+
     def dispatch(self, request, *args, **kwargs):
         if self.get_object().user != request.user:
             raise PermissionDenied
@@ -204,19 +207,7 @@ class SubmissionEditView(UpdateView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         instance = kwargs.pop('instance')
-        form_data = instance.form_data
-
-        for field in self.object.form_fields:
-            if isinstance(field.block, MustIncludeFieldBlock):
-                # convert certain data to the correct field id
-                try:
-                    response = form_data[field.block.name]
-                except KeyError:
-                    pass
-                else:
-                    form_data[field.id] = response
-
-        kwargs['initial'] = form_data
+        kwargs['initial'] = instance.raw_data
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -227,65 +218,65 @@ class SubmissionEditView(UpdateView):
 
     def form_valid(self, form):
         self.object.form_data = form.cleaned_data
-        self.object.save()
 
         if 'save' in self.request.POST:
+            self.object.create_revision(draft=True)
             return self.form_invalid(form)
 
-        transition = set(self.request.POST.keys()) & set(self.transitions.keys())
+        action = set(self.request.POST.keys()) & set(self.transitions.keys())
 
-        if transition:
-            transition_object = self.transitions[transition.pop()]
-            self.object.get_transition(transition_object.target)(by=self.request.user)
-            self.object.save()
+        transition = self.transitions[action.pop()]
+        self.object.perform_transition(transition.target, self.request.user)
 
         return HttpResponseRedirect(self.get_success_url())
 
 
-class RevisionListView(TemplateView):
-    template_name = 'funds/revisions_list.html'
+@method_decorator(staff_required, name='dispatch')
+class RevisionListView(ListView):
+    model = ApplicationRevision
+
+    def get_queryset(self):
+        self.submission = get_object_or_404(ApplicationSubmission, id=self.kwargs['submission_pk'])
+        self.queryset = self.model.objects.filter(
+            submission=self.submission,
+        ).exclude(
+            draft__isnull=False,
+            live__isnull=True,
+        )
+        return super().get_queryset()
 
     def get_context_data(self, **kwargs):
-        submission = ApplicationSubmission.objects.get(id=self.kwargs['submission_pk'])
-        revisions = [{
-            'date': "2018/06/14",
-            'author': User.objects.first(),
-            'id': submission.id,
-        }]
-        revisions.extend([{
-            'date': "2018/06/14",
-            'author': User.objects.all()[i],
-            'id': ApplicationSubmission.objects.order_by('?').first().id,
-        } for i in range(5)])
         return super().get_context_data(
-            submission=submission,
-            revisions=revisions,
+            submission=self.submission,
             **kwargs,
         )
 
 
-class RevisionCompareView(TemplateView):
+class RevisionCompareView(DetailView):
+    model = ApplicationSubmission
     template_name = 'funds/revisions_compare.html'
+    pk_url_kwarg = 'submission_pk'
 
     def compare_revisions(self, from_data, to_data):
         diffed_form_data = {
             field: compare(from_data.form_data.get(field), to_data.form_data[field])
             for field in to_data.form_data
         }
+        self.object.form_data = from_data.form_data
+        from_fields = self.object.fields
+
+        self.object.form_data = to_data.form_data
+        to_fields = self.object.fields
+
         diffed_answers = [
             compare(*fields, should_bleach=False)
-            for fields in zip(from_data.fields, to_data.fields)
+            for fields in zip(from_fields, to_fields)
         ]
-        to_data.form_data = diffed_form_data
-        to_data.render_answers = mark_safe(''.join(diffed_answers))
-        return to_data
+        self.object.form_data = diffed_form_data
+        self.object.render_answers = mark_safe(''.join(diffed_answers))
 
     def get_context_data(self, **kwargs):
-        from_revision = ApplicationSubmission.objects.get(id=self.kwargs['from'])
-        to_revision = ApplicationSubmission.objects.get(id=self.kwargs['to'])
-        diff = self.compare_revisions(from_revision, to_revision)
-        return super().get_context_data(
-            submission=ApplicationSubmission.objects.get(id=self.kwargs['submission_pk']),
-            diff=diff,
-            **kwargs,
-        )
+        from_revision = self.object.revisions.get(id=self.kwargs['from'])
+        to_revision = self.object.revisions.get(id=self.kwargs['to'])
+        self.object = self.compare_revisions(from_revision, to_revision)
+        return super().get_context_data(**kwargs)
