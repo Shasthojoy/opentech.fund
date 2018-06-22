@@ -57,6 +57,8 @@ class BaseDeterminationForm(forms.ModelForm):
 
         self.update_outcome_choices_for_phase(submission.phase)
 
+        self.update_outcome_choices_for_phase(submission.phase)
+
         if self.draft_button_name in self.data:
             for field in self.fields.values():
                 field.required = False
