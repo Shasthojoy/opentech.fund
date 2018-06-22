@@ -521,7 +521,7 @@ def make_permission_check(users):
 
 def wrap_method(func):
     def wrapped(*args, **kwargs):
-        # Provides an new function that can be wrapped with the django fsm method
+        # Provides a new function that can be wrapped with the django_fsm method
         # Without this using the same method for multiple transitions fails as
         # the fsm wrapping is overwritten
         return func(*args, **kwargs)
@@ -585,6 +585,8 @@ class AddTransitions(models.base.ModelBase):
 
         def perform_transition(self, action, user):
             transition = self.get_transition(action)
+            if not transition:
+                raise PermissionDenied(f'Invalid "{ action }" transition')
             if not can_proceed(transition):
                 action = self.phase.transitions[action]
                 raise PermissionDenied(f'You do not have permission to "{ action }"')
@@ -775,6 +777,7 @@ class ApplicationSubmission(WorkflowHelpers, BaseStreamForm, AbstractFormSubmiss
                 revision = self.draft_revision
                 revision.form_data = self.form_data
                 revision.author = by
+                revision.save()
 
             if draft:
                 self.form_data = self.live_revision.form_data

@@ -5,7 +5,6 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.generic import DetailView
-from django_fsm import can_proceed
 
 from opentech.apply.funds.models import ApplicationSubmission
 from opentech.apply.utils.views import CreateOrUpdateView
@@ -83,12 +82,11 @@ class DeterminationCreateOrUpdateView(CreateOrUpdateView):
         return self.progress_stage(self.submission) or response
 
     def progress_stage(self, instance):
-        # TODO update post-revisions work
-        proposal_transition = instance.get_transition('draft_proposal')
-        if proposal_transition:
-            if can_proceed(proposal_transition):
-                proposal_transition(by=self.request.user)
-                instance.save()
+        try:
+            instance.perform_transition('draft_proposal', self.request.user)
+        except PermissionDenied:
+            pass
+        else:
             return HttpResponseRedirect(instance.get_absolute_url())
 
     def get_action_name_from_determination(self, determination):
